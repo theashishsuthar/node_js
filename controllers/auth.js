@@ -1,13 +1,23 @@
 const bcrypt = require("bcryptjs");
-const sweetAlert = require("sweetalert2");
+const nodemailer = require("nodemailer");
+const sendGridMailer = require("nodemailer-sendgrid-transport");
+
 const User = require("../models/user");
 
+const transporter = nodemailer.createTransport(
+  sendGridMailer({
+    auth: {
+      api_key:
+        "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",
+    },
+  })
+);
 exports.getLogin = (req, res, next) => {
   // const isLoggedIn = req.get("Cookie").split(';')[0].trim().split('=')[1];
-  let message = req.flash('error');
-  if(message.length >0){
+  let message = req.flash("error");
+  if (message.length > 0) {
     message = message[0];
-  }else{
+  } else {
     message = null;
   }
   // console.log(req.session);
@@ -15,22 +25,22 @@ exports.getLogin = (req, res, next) => {
     path: "/login",
     pageTitle: "Login",
     isAuthenticated: false,
-    errorMessage:message
+    errorMessage: message,
   });
 };
 
 exports.getSignup = (req, res, next) => {
-  let message = req.flash('error');
-  if(message.length >0){
+  let message = req.flash("error");
+  if (message.length > 0) {
     message = message[0];
-  }else{
+  } else {
     message = null;
   }
   res.render("auth/signup", {
     path: "/signup",
     pageTitle: "Signup",
     isAuthenticated: false,
-    errorMessage:message,
+    errorMessage: message,
   });
 };
 
@@ -40,7 +50,7 @@ exports.postLogin = (req, res, next) => {
 
   User.findOne({ email: email }).then((user) => {
     if (!user) {
-      req.flash('error','Invalid email or password');
+      req.flash("error", "Invalid email or password");
       return res.redirect("/login");
     }
 
@@ -55,7 +65,7 @@ exports.postLogin = (req, res, next) => {
             res.redirect("/");
           });
         }
-        req.flash('error','Invalid email or password');
+        req.flash("error", "Invalid email or password");
         res.redirect("/login");
       })
       .catch((err) => {
@@ -80,8 +90,8 @@ exports.postSignup = (req, res, next) => {
     .then((userDoc) => {
       if (userDoc) {
         // return console.log('Use already exist');
-        req.flash('error','Email already exist');
-       return  res.redirect('/signup');
+        req.flash("error", "Email already exist");
+        return res.redirect("/signup");
       }
       return bcrypt
         .hash(password, 12)
@@ -95,7 +105,15 @@ exports.postSignup = (req, res, next) => {
         })
         .then((result) => {
           res.redirect("/login");
-        });
+          return transporter.sendMail({
+            to: email,
+            from: "www.gajjarashish5656@gmail.com",
+            subject: "Sucessfully signup",
+
+            html: "<h1>You have succesfully created account</h1>",
+          });
+        })
+        .catch(err=>console.log(err));
     })
 
     .catch((err) => {
@@ -109,3 +127,18 @@ exports.postLogout = (req, res, next) => {
     res.redirect("/");
   });
 };
+
+exports.getReset = (req,res,next) =>{
+  let message = req.flash("error");
+  if (message.length > 0) {
+    message = message[0];
+  } else {
+    message = null;
+  }
+  res.render("auth/reset", {
+    path: "/reset",
+    pageTitle: "Reset password",
+    isAuthenticated: false,
+    errorMessage: message,
+  });
+}
