@@ -28,6 +28,11 @@ exports.getLogin = (req, res, next) => {
     pageTitle: "Login",
     isAuthenticated: false,
     errorMessage: message,
+    validationError:[],
+    oldInput:{
+      email:'',
+      password:''
+    }
   });
 };
 
@@ -43,6 +48,12 @@ exports.getSignup = (req, res, next) => {
     pageTitle: "Signup",
     isAuthenticated: false,
     errorMessage: message,
+    oldInput : {
+      email:'',
+      password : '',
+      confirmPassword:''
+    },
+    validationError : []
   });
 };
 
@@ -50,10 +61,34 @@ exports.postLogin = (req, res, next) => {
   const email = req.body.email;
   const password = req.body.password;
 
+  const errors = validationResult(req);
+
+  if(!errors.isEmpty()){
+    console.log(errors);
+    return res.status(422).render("auth/login", {
+      path: "/login",
+      pageTitle: "Login",
+      errorMessage: errors.array()[0].msg,
+      oldInput : {
+        email:email,
+        password : password,
+      },
+      validationError : errors.array()
+    });
+  }
+
   User.findOne({ email: email }).then((user) => {
     if (!user) {
-      req.flash("error", "Invalid email or password");
-      return res.redirect("/login");
+      return res.status(422).render("auth/login", {
+        path: "/login",
+        pageTitle: "Login",
+        errorMessage:'Invalid email or password',
+        oldInput : {
+          email:email,
+          password : password,
+        },
+        validationError : errors.array()
+      });
     }
 
     bcrypt
@@ -67,8 +102,16 @@ exports.postLogin = (req, res, next) => {
             res.redirect("/");
           });
         }
-        req.flash("error", "Invalid email or password");
-        res.redirect("/login");
+        return res.status(422).render("auth/login", {
+          path: "/login",
+          pageTitle: "Login",
+          errorMessage:'Invalid email or password',
+          oldInput : {
+            email:email,
+            password : password,
+          },
+          validationError : errors.array()
+        });
       })
       .catch((err) => {
         console.log(err);
@@ -86,7 +129,6 @@ const alertDialog = () => {
 exports.postSignup = (req, res, next) => {
   const email = req.body.email;
   const password = req.body.password;
-  const confirmPassword = req.body.confirmPassword;
   const errors = validationResult(req);
 
   if(!errors.isEmpty()){
@@ -96,17 +138,17 @@ exports.postSignup = (req, res, next) => {
       pageTitle: "Signup",
       isAuthenticated: false,
       errorMessage: errors.array()[0].msg,
+      oldInput : {
+        email:email,
+        password : password,
+        confirmPassword:req.body.confirmPassword
+      },
+      validationError : errors.array()
     });
   }
 
-  User.findOne({ email: email })
-    .then((userDoc) => {
-      if (userDoc) {
-        // return console.log('Use already exist');
-        req.flash("error", "Email already exist");
-        return res.redirect("/signup");
-      }
-      return bcrypt
+  
+      bcrypt
         .hash(password, 12)
         .then((hasedPassword) => {
           const user = new User({
@@ -127,11 +169,8 @@ exports.postSignup = (req, res, next) => {
           });
         })
         .catch((err) => console.log(err));
-    })
+  
 
-    .catch((err) => {
-      console.log(err);
-    });
 };
 
 exports.postLogout = (req, res, next) => {
