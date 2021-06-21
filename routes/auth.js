@@ -21,6 +21,7 @@ router.post(
     check("email")
       .isEmail()
       .withMessage("Please enter valid email")
+      .normalizeEmail()
       .custom((value, {req}) => {
         return User.findOne({ email: value }).then((userDoc) => {
           if (userDoc) {
@@ -35,8 +36,9 @@ router.post(
       "Please,Password should be alphanumberic and at least 6 character long"
     )
       .isLength({ min: 5 })
-      .isAlphanumeric(),
-    body("confirmPassword").custom((values, { req }) => {
+      .isAlphanumeric()
+      .trim(),
+    body("confirmPassword").trim().custom((values, { req }) => {
       if (values != req.body.password) {
         throw new Error("Password have to be match");
       }
